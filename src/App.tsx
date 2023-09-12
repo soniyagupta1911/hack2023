@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import logo from './logo.svg';
 import { Configuration, OpenAIApi } from 'openai';
+import {WebApi, getPersonalAccessTokenHandler} from 'azure-devops-node-api';
 import './App.css';
+import { GitPullRequest } from 'azure-devops-node-api/interfaces/GitInterfaces';
 
 function App() {
   const [text, setText] = useState('');
@@ -13,7 +15,27 @@ function App() {
   });
   const openai = new OpenAIApi(configuration);
 
+  function ViewPullRequests(pullRequestId: number, GitRepo: string) {
+    debugger;
+    let authHandler = getPersonalAccessTokenHandler("rjq3qtv6yrgf567gpg3ua6ibl4nnqrcegwm23up7tphoc7yymqzq");
+    let connection = new WebApi("https://microsoft.visualstudio.com/Universal%20Store", authHandler);
+  
+    // Get a GitHttpClient to talk to the Git endpoints
+    connection.getGitApi().then((GitClient)=>{ GitClient.getPullRequest(GitRepo, pullRequestId).then((pullRequests:GitPullRequest) => {
+      GitClient.getPullRequestCommits(GitRepo, pullRequestId).then(commits => {
+          commits.forEach(commit => {
+              console.log(`${commit.commitId?.substring(0, 8)} ${commit.comment}`);
+              GitClient.getChanges(commit.commitId!, GitRepo).then(changes => {
+                  changes.changes?.forEach(change => {
+                      console.log(`${change.changeType}: ${change.item?.path}`);
+                  });
+              });
+          });
+      });
+}).catch(error => console.error(error));});
+
   const handleSumit = (e:any) => {
+    ViewPullRequests(9530365,"https://microsoft.visualstudio.com/Universal%20Store/_git/PSX.L2O.SalesPlatformUX.MSXExperience")
     e.preventDefault();
     setLoading(true);
 
@@ -37,7 +59,7 @@ function App() {
   };
 
   const generatePrompt = (text:string) => {
-    return `Please write a detailed description of below workitems in five lines minimum of each workitem, ensuring that you group similar workitem together for clarity: ${text}`;
+    return `Summarize this in two lines: ${text}`;
   };
 
   return (
@@ -81,6 +103,7 @@ function App() {
       </div>
     </div>
   );
+}
 }
 
 export default App;
